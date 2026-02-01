@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Roll Number Auditor</title>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body data-theme="dark">
+		<!-- Custom Title Bar -->
+		<div class="title-bar" id="titleBar">
+			<div class="title-bar-left">
+				<div class="app-icon">
+					<svg width="20" height="20" viewBox="0 0 256 256">
+						<rect width="256" height="256" rx="64" fill="#6366f1" />
+						<rect x="64" y="64" width="128" height="152" rx="12" fill="white" />
+						<rect x="96" y="48" width="64" height="32" rx="8" fill="white" />
+						<circle cx="128" cy="64" r="16" fill="#6366f1" />
+						<path
+							d="M96 112 L112 128 L160 88"
+							stroke="#6366f1"
+							stroke-width="20"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							fill="none" />
+						<path
+							d="M96 160 L112 176 L160 136"
+							stroke="#6366f1"
+							stroke-width="20"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							fill="none" />
+					</svg>
+				</div>
+				<span class="app-title">Roll Number Auditor</span>
+			</div>
+			<div class="title-bar-controls">
+				<button class="title-bar-button" id="themeBtn" title="Toggle Theme">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						class="theme-icon-sun">
+						<circle cx="8" cy="8" r="3" fill="currentColor" />
+						<line
+							x1="8"
+							y1="1"
+							x2="8"
+							y2="3"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="8"
+							y1="13"
+							x2="8"
+							y2="15"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="1"
+							y1="8"
+							x2="3"
+							y2="8"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="13"
+							y1="8"
+							x2="15"
+							y2="8"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="3"
+							y1="3"
+							x2="4.5"
+							y2="4.5"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="11.5"
+							y1="11.5"
+							x2="13"
+							y2="13"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="13"
+							y1="3"
+							x2="11.5"
+							y2="4.5"
+							stroke="currentColor"
+							stroke-width="1.5" />
+						<line
+							x1="4.5"
+							y1="11.5"
+							x2="3"
+							y2="13"
+							stroke="currentColor"
+							stroke-width="1.5" />
+					</svg>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						class="theme-icon-moon"
+						style="display: none">
+						<path
+							d="M6 0.5C2.5 1 0 4.5 0 8.5C0 12.9 3.6 16.5 8 16.5C12 16.5 15.5 14 16 10.5C11 11.5 6.5 7 6 0.5Z"
+							fill="currentColor" />
+					</svg>
+				</button>
+				<button class="title-bar-button" id="reloadBtn" title="Reset Form">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round">
+						<path
+							d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+					</svg>
+				</button>
+				<button class="title-bar-button" id="settingsBtn" title="Settings">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round">
+						<circle cx="12" cy="12" r="3"></circle>
+						<path
+							d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+					</svg>
+				</button>
+				<button
+					class="title-bar-button minimize-btn"
+					id="minimizeBtn"
+					title="Minimize">
+					<svg width="12" height="12" viewBox="0 0 12 12">
+						<rect x="0" y="5" width="12" height="2" fill="currentColor" />
+					</svg>
+				</button>
+				<button
+					class="title-bar-button maximize-btn"
+					id="maximizeBtn"
+					title="Maximize">
+					<svg width="12" height="12" viewBox="0 0 12 12">
+						<rect
+							x="1"
+							y="1"
+							width="10"
+							height="10"
+							stroke="currentColor"
+							stroke-width="1.5"
+							fill="none" />
+					</svg>
+				</button>
+				<button class="title-bar-button close-btn" id="closeBtn" title="Close">
+					<svg width="12" height="12" viewBox="0 0 12 12">
+						<path
+							d="M 1,1 L 11,11 M 11,1 L 1,11"
+							stroke="currentColor"
+							stroke-width="1.5" />
+					</svg>
+				</button>
+			</div>
+		</div>
+
+		<!-- Main Content -->
+		<div class="app-content">
+			<!-- Left Panel: Form -->
+			<div class="left-panel">
+				<div class="card">
+					<div class="card-header">
+						<h3 class="card-title">Configuration</h3>
+						<p class="card-description">Set your audit parameters</p>
+					</div>
+					<div class="card-content">
+						<div class="input-grid">
+							<div class="form-group">
+								<label class="form-label">Start Roll</label>
+								<input
+									type="text"
+									id="startRoll"
+									class="input"
+									placeholder="001"
+									value="001"
+									maxlength="3" />
+								<p class="form-description">Last 3 digits</p>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">End Roll</label>
+								<input
+									type="text"
+									id="endRoll"
+									class="input"
+									placeholder="140"
+									value="140"
+									maxlength="3" />
+								<p class="form-description">Last 3 digits</p>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Position in Filename</label>
+								<div class="custom-select-wrapper">
+									<button
+										type="button"
+										class="custom-select-trigger"
+										id="positionTrigger">
+										<span class="custom-select-value">Middle</span>
+										<svg
+											width="16"
+											height="16"
+											viewBox="0 0 16 16"
+											fill="none"
+											class="custom-select-arrow">
+											<path
+												d="M4 6L8 10L12 6"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round" />
+										</svg>
+									</button>
+									<div class="custom-select-dropdown" id="positionDropdown">
+										<div class="custom-select-option" data-value="Start">
+											Start
+										</div>
+										<div
+											class="custom-select-option selected"
+											data-value="Middle">
+											Middle
+										</div>
+										<div class="custom-select-option" data-value="End">End</div>
+									</div>
+									<select id="position" class="select-hidden">
+										<option value="Middle" selected>Middle</option>
+										<option value="Start">Start</option>
+										<option value="End">End</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="form-label">Max File Size (MB)</label>
+								<div class="input-with-unit">
+									<input
+										type="number"
+										id="maxSize"
+										class="input"
+										placeholder="No limit"
+										min="0"
+										step="1" />
+									<span class="input-unit">MB</span>
+								</div>
+								<p class="form-description">Leave empty for no limit</p>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label class="checkbox-wrapper">
+								<input
+									type="checkbox"
+									id="checkDuplicates"
+									class="checkbox"
+									checked />
+								<span class="checkbox-label"
+									>Check for duplicate submissions</span
+								>
+							</label>
+						</div>
+
+						<div class="form-group">
+							<label class="form-label">Ignore Specific Rolls</label>
+							<input
+								type="text"
+								id="ignoreRolls"
+								class="input"
+								placeholder="e.g. 005, 012, 025" />
+							<p class="form-description">Comma-separated list</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="card">
+					<div class="card-content">
+						<div class="form-group">
+							<label class="form-label">PDF Folder</label>
+							<div class="file-input-group">
+								<input
+									type="text"
+									id="folderPath"
+									class="input"
+									placeholder="No folder selected"
+									readonly />
+								<button id="browseBtn" class="button button-secondary">
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+										<path
+											d="M14 6L14 14L2 14L2 2L6 2"
+											stroke="currentColor"
+											stroke-width="1.5"
+											stroke-linecap="round" />
+										<path
+											d="M6 2L10 2L14 6"
+											stroke="currentColor"
+											stroke-width="1.5"
+											stroke-linecap="round"
+											stroke-linejoin="round" />
+										<path
+											d="M10 2L10 6L14 6"
+											stroke="currentColor"
+											stroke-width="1.5"
+											stroke-linecap="round"
+											stroke-linejoin="round" />
+									</svg>
+									Browse
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<button id="auditBtn" class="button button-primary button-lg">
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+						<path
+							d="M14 8L2 8M8 2L8 14"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round" />
+					</svg>
+					Run Audit
+				</button>
+			</div>
+
+			<!-- Resize Handle -->
+			<div class="resize-handle" id="resizeHandle">
+				<div class="resize-line"></div>
+			</div>
+
+			<!-- Right Panel: Results -->
+			<div class="right-panel">
+				<div class="card card-full">
+					<div class="card-header">
+						<div>
+							<h3 class="card-title">Audit Report</h3>
+							<p class="card-description">Results will appear here</p>
+						</div>
+						<div class="button-group">
+							<button
+								id="exportBtn"
+								class="button button-outline button-sm"
+								style="display: none">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5">
+									<path
+										d="M14 11v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2M8 11V2M5 5l3-3 3 3"
+										stroke-linecap="round"
+										stroke-linejoin="round" />
+								</svg>
+								Export
+							</button>
+							<button
+								id="copyBtn"
+								class="button button-outline button-sm"
+								style="display: none">
+								<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+									<rect
+										x="5"
+										y="5"
+										width="9"
+										height="9"
+										stroke="currentColor"
+										stroke-width="1.5"
+										fill="none" />
+									<path
+										d="M3 11L3 3L11 3"
+										stroke="currentColor"
+										stroke-width="1.5"
+										fill="none" />
+								</svg>
+								Copy
+							</button>
+						</div>
+					</div>
+					<div class="card-content card-content-terminal">
+						<div id="resultBox" class="terminal"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Confirm Dialog -->
+		<div class="dialog-overlay" id="confirmOverlay">
+			<div class="dialog dialog-sm">
+				<div class="dialog-header">
+					<div>
+						<h2 class="dialog-title" id="confirmTitle">Confirm</h2>
+					</div>
+				</div>
+				<div class="dialog-body">
+					<p
+						id="confirmMessage"
+						style="margin: 0; color: hsl(var(--foreground))">
+						Are you sure?
+					</p>
+				</div>
+				<div class="dialog-footer">
+					<button id="confirmCancelBtn" class="button button-outline">
+						Cancel
+					</button>
+					<button id="confirmOkBtn" class="button button-primary">OK</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Settings Dialog -->
+		<div class="dialog-overlay" id="settingsOverlay">
+			<div class="dialog">
+				<div class="dialog-header">
+					<div>
+						<h2 class="dialog-title">Settings</h2>
+						<p class="dialog-description">Configure default preferences</p>
+					</div>
+					<button class="dialog-close" id="closeSettings">
+						<svg width="16" height="16" viewBox="0 0 16 16">
+							<path
+								d="M 2,2 L 14,14 M 14,2 L 2,14"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round" />
+						</svg>
+					</button>
+				</div>
+				<div class="dialog-body">
+					<div class="form-group">
+						<label class="form-label">Default Ignore Rolls</label>
+						<textarea
+							id="savedIgnoreRolls"
+							class="textarea"
+							rows="3"
+							placeholder="e.g. 005, 012, 025"></textarea>
+						<p class="form-description">
+							These will be pre-filled when you open the app
+						</p>
+					</div>
+					<div class="form-group">
+						<label class="checkbox-wrapper">
+							<input
+								type="checkbox"
+								id="settingsCheckDuplicates"
+								class="checkbox"
+								checked />
+							<span class="checkbox-label"
+								>Check for duplicates by default</span
+							>
+						</label>
+					</div>
+				</div>
+				<div class="dialog-footer">
+					<button id="saveSettingsBtn" class="button button-primary">
+						Save Settings
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Toast Notification Container -->
+		<div id="toastContainer" class="toast-container"></div>
+
+		<script src="renderer.js"></script>
+	</body>
+</html>

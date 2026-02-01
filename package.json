@@ -1,0 +1,25 @@
+{
+	"name": "roll-number-auditor-v3",
+	"version": "3.0.0",
+	"description": "Roll Number Auditor with ShadCN UI",
+	"main": "src/main/main.js",
+	"scripts": {
+		"start": "electron .",
+		"build": "electron-builder --config electron-builder.config.js",
+		"build:win-portable": "electron-builder --win portable --config electron-builder.config.js",
+		"build:dir": "electron-builder --dir"
+	},
+	"keywords": [
+		"electron",
+		"roll-number",
+		"audit",
+		"pdf",
+		"shadcn"
+	],
+	"author": "Me Shadow Amitendu",
+	"license": "MIT",
+	"devDependencies": {
+		"electron": "^28.0.0",
+		"electron-builder": "^24.13.3"
+	}
+}
