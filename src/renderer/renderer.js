@@ -1,7 +1,6 @@
 // DOM Elements
 const startRollInput = document.getElementById("startRoll");
 const endRollInput = document.getElementById("endRoll");
-const positionSelect = document.getElementById("position");
 const maxSizeInput = document.getElementById("maxSize");
 const ignoreRollsInput = document.getElementById("ignoreRolls");
 const checkDuplicatesCheckbox = document.getElementById("checkDuplicates");
@@ -12,6 +11,14 @@ const copyBtn = document.getElementById("copyBtn");
 const exportBtn = document.getElementById("exportBtn");
 const resultBox = document.getElementById("resultBox");
 const toastContainer = document.getElementById("toastContainer");
+
+// Tab elements
+const localFolderTab = document.getElementById("localFolderTab");
+const publicFolderTab = document.getElementById("publicFolderTab");
+const localFolderContent = document.getElementById("localFolderContent");
+const publicFolderContent = document.getElementById("publicFolderContent");
+const publicFolderUrl = document.getElementById("publicFolderUrl");
+const filePattern = document.getElementById("filePattern");
 
 // Layout elements
 const leftPanel = document.querySelector(".left-panel");
@@ -31,6 +38,7 @@ const settingsOverlay = document.getElementById("settingsOverlay");
 const closeSettingsBtn = document.getElementById("closeSettings");
 const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 const savedIgnoreRollsTextarea = document.getElementById("savedIgnoreRolls");
+const rollNumberPatternInput = document.getElementById("rollNumberPattern");
 const settingsCheckDuplicatesCheckbox = document.getElementById(
 	"settingsCheckDuplicates",
 );
@@ -45,8 +53,12 @@ const confirmCancelBtn = document.getElementById("confirmCancelBtn");
 let selectedFolderPath = null;
 let currentReport = "";
 let currentTheme = "dark";
+let currentSourceType = "local"; // "local" or "public"
 
-// Initialize
+/**
+ * Initializes the application by setting up the UI and loading saved settings.
+ * Sets initial terminal text and applies user preferences.
+ */
 async function init() {
 	// Set initial terminal text
 	resultBox.textContent =
@@ -56,6 +68,11 @@ async function init() {
 	applySettings(settings);
 }
 
+/**
+ * Applies saved settings to the UI elements.
+ * Updates form inputs, theme, and other UI state based on loaded settings.
+ * @param {Object} settings - Settings object loaded from storage
+ */
 function applySettings(settings) {
 	currentTheme = settings.theme || "dark";
 	document.body.setAttribute("data-theme", currentTheme);
@@ -63,7 +80,8 @@ function applySettings(settings) {
 
 	if (settings.startRoll) startRollInput.value = settings.startRoll;
 	if (settings.endRoll) endRollInput.value = settings.endRoll;
-	if (settings.position) positionSelect.value = settings.position;
+	if (settings.rollNumberPattern)
+		rollNumberPatternInput.value = settings.rollNumberPattern;
 	if (settings.maxSizeMB) maxSizeInput.value = settings.maxSizeMB;
 	if (settings.ignoreRolls) {
 		ignoreRollsInput.value = settings.ignoreRolls;
@@ -75,13 +93,17 @@ function applySettings(settings) {
 	}
 }
 
+/**
+ * Saves the current form settings to persistent storage.
+ * Collects values from all input fields and saves them for future sessions.
+ */
 async function saveCurrentSettings() {
 	const settings = {
 		theme: currentTheme,
 		ignoreRolls: savedIgnoreRollsTextarea.value,
 		startRoll: startRollInput.value,
 		endRoll: endRollInput.value,
-		position: positionSelect.value,
+		rollNumberPattern: rollNumberPatternInput.value || "___",
 		maxSizeMB: maxSizeInput.value,
 		checkDuplicates: settingsCheckDuplicatesCheckbox.checked,
 	};
@@ -89,7 +111,36 @@ async function saveCurrentSettings() {
 	await window.electron.saveSettings(settings);
 }
 
+// Tab Switching
+/**
+ * Switches between local folder and public folder audit modes.
+ * Updates UI visibility and sets the current source type.
+ * @param {string} tab - The tab to switch to ("local" or "public")
+ */
+function switchTab(tab) {
+	currentSourceType = tab;
+
+	if (tab === "local") {
+		localFolderTab.classList.add("tab-button-active");
+		publicFolderTab.classList.remove("tab-button-active");
+		localFolderContent.classList.add("tab-content-active");
+		publicFolderContent.classList.remove("tab-content-active");
+	} else {
+		publicFolderTab.classList.add("tab-button-active");
+		localFolderTab.classList.remove("tab-button-active");
+		publicFolderContent.classList.add("tab-content-active");
+		localFolderContent.classList.remove("tab-content-active");
+	}
+}
+
+localFolderTab.addEventListener("click", () => switchTab("local"));
+publicFolderTab.addEventListener("click", () => switchTab("public"));
+
 // Theme Toggle
+/**
+ * Toggles between dark and light themes.
+ * Updates the document theme attribute and icon visibility.
+ */
 function toggleTheme() {
 	currentTheme = currentTheme === "dark" ? "light" : "dark";
 	document.body.setAttribute("data-theme", currentTheme);
@@ -97,6 +148,10 @@ function toggleTheme() {
 	saveCurrentSettings();
 }
 
+/**
+ * Updates the theme toggle button icon based on current theme.
+ * Shows sun icon for dark theme and moon icon for light theme.
+ */
 function updateThemeIcon() {
 	const sunIcon = document.querySelector(".theme-icon-sun");
 	const moonIcon = document.querySelector(".theme-icon-moon");
@@ -209,6 +264,11 @@ browseBtn.addEventListener("click", async () => {
 });
 
 // Convert MB input to bytes
+/**
+ * Converts megabyte input value to bytes for file size comparison.
+ * Returns 0 if no limit is set (empty or invalid input).
+ * @returns {number} Size limit in bytes (1 MB = 1024 * 1024 bytes)
+ */
 function getMBAsBytes() {
 	const mbValue = parseFloat(maxSizeInput.value);
 	if (isNaN(mbValue) || mbValue <= 0) {
@@ -218,15 +278,28 @@ function getMBAsBytes() {
 	return mbValue * 1024 * 1024;
 }
 
+/**
+ * Converts bytes to megabytes for display purposes.
+ * @param {number} bytes - Size in bytes
+ * @returns {string} Size formatted as megabytes with 2 decimal places
+ */
 function bytesToMB(bytes) {
 	return (bytes / (1024 * 1024)).toFixed(2);
 }
 
 // Audit
 auditBtn.addEventListener("click", async () => {
-	if (!selectedFolderPath) {
-		showNotification("Please select a folder first.", "error");
-		return;
+	// Validate based on source type
+	if (currentSourceType === "local") {
+		if (!selectedFolderPath) {
+			showNotification("Please select a folder first.", "error");
+			return;
+		}
+	} else if (currentSourceType === "public") {
+		if (!publicFolderUrl.value.trim()) {
+			showNotification("Please enter a valid Drive folder URL.", "error");
+			return;
+		}
 	}
 
 	const startRoll = parseInt(startRollInput.value);
@@ -245,7 +318,7 @@ auditBtn.addEventListener("click", async () => {
 		return;
 	}
 
-	const position = positionSelect.value;
+	const rollNumberPattern = rollNumberPatternInput.value || "___";
 	const maxSize = getMBAsBytes(); // Convert MB to bytes
 	const maxSizeMB = maxSizeInput.value || "0";
 	const checkDuplicates = checkDuplicatesCheckbox.checked;
@@ -267,14 +340,21 @@ auditBtn.addEventListener("click", async () => {
 	exportBtn.style.display = "none";
 
 	const config = {
-		folderPath: selectedFolderPath,
+		sourceType: currentSourceType,
 		startRoll,
 		endRoll,
-		position,
+		rollNumberPattern,
 		maxSize,
 		ignoreList,
 		checkDuplicates,
 	};
+
+	if (currentSourceType === "local") {
+		config.folderPath = selectedFolderPath;
+	} else {
+		config.publicFolderUrl = publicFolderUrl.value.trim();
+		config.filePattern = filePattern.value.trim() || ".pdf";
+	}
 
 	const result = await window.electron.auditRolls(config);
 
@@ -283,8 +363,9 @@ auditBtn.addEventListener("click", async () => {
 		resultBox.textContent = report;
 		currentReport = report;
 
+		const reportPath = currentSourceType === "local" ? selectedFolderPath : "";
 		await window.electron.saveReport({
-			folderPath: selectedFolderPath,
+			folderPath: reportPath,
 			content: report,
 			interactive: false,
 		});
@@ -340,6 +421,13 @@ exportBtn.addEventListener("click", async () => {
 });
 
 // Custom Confirm Dialog
+/**
+ * Shows a custom confirmation dialog with OK/Cancel options.
+ * Returns a promise that resolves to true for OK, false for Cancel.
+ * @param {string} message - The message to display in the dialog
+ * @param {string} title - The dialog title (default: "Confirm")
+ * @returns {Promise<boolean>} User choice (true for OK, false for Cancel)
+ */
 function showConfirm(message, title = "Confirm") {
 	return new Promise((resolve) => {
 		confirmTitle.textContent = title;
@@ -382,12 +470,14 @@ reloadBtn.addEventListener("click", async () => {
 	if (confirmed) {
 		startRollInput.value = "001";
 		endRollInput.value = "140";
-		positionSelect.value = "Middle";
 		maxSizeInput.value = "";
 		ignoreRollsInput.value = "";
+		publicFolderUrl.value = "";
+		filePattern.value = "";
 		selectedFolderPath = null;
 		folderPathInput.value = "";
 		folderPathInput.classList.remove("success");
+		switchTab("local");
 		resultBox.textContent =
 			'Ready to audit.\n\n1. Select a folder containing PDFs\n2. Configure your parameters\n3. Click "Run Audit"';
 		copyBtn.style.display = "none";
@@ -442,6 +532,12 @@ folderPathInput.parentElement.addEventListener("drop", async (e) => {
 });
 
 // Toast Notification System
+/**
+ * Shows a toast notification with an icon and message.
+ * Automatically removes the notification after 3 seconds.
+ * @param {string} message - The notification message
+ * @param {string} type - Notification type ("success", "error", "info") default: "info"
+ */
 function showNotification(message, type = "info") {
 	const toast = document.createElement("div");
 	toast.className = `toast ${type}`;
@@ -485,6 +581,14 @@ function showNotification(message, type = "info") {
 }
 
 // Format Report
+/**
+ * Formats audit results into a human-readable text report.
+ * Includes summary statistics, missing rolls, duplicates, and size warnings.
+ * @param {Object} result - Audit result object from main process
+ * @param {string} maxSizeMB - Maximum file size limit in MB
+ * @param {boolean} checkDuplicates - Whether duplicate checking was enabled
+ * @returns {string} Formatted report text
+ */
 function formatReport(result, maxSizeMB, checkDuplicates) {
 	let report = "AUDIT SUMMARY\n";
 	report += "-".repeat(40) + "\n\n";
@@ -547,6 +651,13 @@ function formatReport(result, maxSizeMB, checkDuplicates) {
 	return report;
 }
 
+/**
+ * Splits an array into smaller chunks of specified size.
+ * Used for formatting roll numbers in columns for better readability.
+ * @param {Array} array - The array to chunk
+ * @param {number} size - Size of each chunk
+ * @returns {Array} Array of chunked arrays
+ */
 function chunkArray(array, size) {
 	const chunks = [];
 	for (let i = 0; i < array.length; i += size) {
@@ -555,69 +666,5 @@ function chunkArray(array, size) {
 	return chunks;
 }
 
-// Custom Dropdown Functionality
-function initCustomDropdown() {
-	const wrapper = document.querySelector(".custom-select-wrapper");
-	const trigger = document.getElementById("positionTrigger");
-	const dropdown = document.getElementById("positionDropdown");
-	const valueDisplay = trigger.querySelector(".custom-select-value");
-	const hiddenSelect = document.getElementById("position");
-	const options = dropdown.querySelectorAll(".custom-select-option");
-
-	// Toggle dropdown
-	trigger.addEventListener("click", (e) => {
-		e.stopPropagation();
-		wrapper.classList.toggle("open");
-	});
-
-	// Select option
-	options.forEach((option) => {
-		option.addEventListener("click", (e) => {
-			e.stopPropagation();
-			const value = option.getAttribute("data-value");
-
-			// Update selected state
-			options.forEach((opt) => opt.classList.remove("selected"));
-			option.classList.add("selected");
-
-			// Update display
-			valueDisplay.textContent = value;
-
-			// Update hidden select
-			hiddenSelect.value = value;
-
-			// Close dropdown
-			wrapper.classList.remove("open");
-
-			// Save settings
-			saveCurrentSettings();
-		});
-	});
-
-	// Close dropdown when clicking outside
-	document.addEventListener("click", (e) => {
-		if (!wrapper.contains(e.target)) {
-			wrapper.classList.remove("open");
-		}
-	});
-
-	// Close dropdown on Escape key
-	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && wrapper.classList.contains("open")) {
-			wrapper.classList.remove("open");
-			trigger.focus();
-		}
-	});
-
-	// Keyboard navigation
-	trigger.addEventListener("keydown", (e) => {
-		if (e.key === "Enter" || e.key === " ") {
-			e.preventDefault();
-			wrapper.classList.toggle("open");
-		}
-	});
-}
-
 // Initialize app
 init();
-initCustomDropdown();

@@ -209,46 +209,6 @@
 							</div>
 
 							<div class="form-group">
-								<label class="form-label">Position in Filename</label>
-								<div class="custom-select-wrapper">
-									<button
-										type="button"
-										class="custom-select-trigger"
-										id="positionTrigger">
-										<span class="custom-select-value">Middle</span>
-										<svg
-											width="16"
-											height="16"
-											viewBox="0 0 16 16"
-											fill="none"
-											class="custom-select-arrow">
-											<path
-												d="M4 6L8 10L12 6"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round" />
-										</svg>
-									</button>
-									<div class="custom-select-dropdown" id="positionDropdown">
-										<div class="custom-select-option" data-value="Start">
-											Start
-										</div>
-										<div
-											class="custom-select-option selected"
-											data-value="Middle">
-											Middle
-										</div>
-										<div class="custom-select-option" data-value="End">End</div>
-									</div>
-									<select id="position" class="select-hidden">
-										<option value="Middle" selected>Middle</option>
-										<option value="Start">Start</option>
-										<option value="End">End</option>
-									</select>
-								</div>
-							</div>
-							<div class="form-group">
 								<label class="form-label">Max File Size (MB)</label>
 								<div class="input-with-unit">
 									<input
@@ -292,36 +252,101 @@
 				<div class="card">
 					<div class="card-content">
 						<div class="form-group">
-							<label class="form-label">PDF Folder</label>
-							<div class="file-input-group">
+							<label class="form-label">Source Type</label>
+							<div class="tab-group">
+								<button
+									class="tab-button tab-button-active"
+									id="localFolderTab"
+									data-tab="local">
+									Local Folder
+								</button>
+								<button
+									class="tab-button"
+									id="publicFolderTab"
+									data-tab="public">
+									Public Drive Folder
+								</button>
+							</div>
+						</div>
+
+						<!-- Local Folder Tab -->
+						<div id="localFolderContent" class="tab-content tab-content-active">
+							<div class="form-group">
+								<label class="form-label">PDF Folder</label>
+								<div class="file-input-group">
+									<input
+										type="text"
+										id="folderPath"
+										class="input"
+										placeholder="No folder selected"
+										readonly />
+									<button id="browseBtn" class="button button-secondary">
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+											<path
+												d="M14 6L14 14L2 14L2 2L6 2"
+												stroke="currentColor"
+												stroke-width="1.5"
+												stroke-linecap="round" />
+											<path
+												d="M6 2L10 2L14 6"
+												stroke="currentColor"
+												stroke-width="1.5"
+												stroke-linecap="round"
+												stroke-linejoin="round" />
+											<path
+												d="M10 2L10 6L14 6"
+												stroke="currentColor"
+												stroke-width="1.5"
+												stroke-linecap="round"
+												stroke-linejoin="round" />
+										</svg>
+										Browse
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<!-- Public Folder Tab -->
+						<div id="publicFolderContent" class="tab-content">
+							<div class="info-banner">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+									<circle
+										cx="8"
+										cy="8"
+										r="7"
+										stroke="currentColor"
+										stroke-width="1.5" />
+									<path
+										d="M8 7V11"
+										stroke="currentColor"
+										stroke-width="1.5"
+										stroke-linecap="round" />
+									<circle cx="8" cy="5" r="0.5" fill="currentColor" />
+								</svg>
+								<span
+									>A browser will open. Scroll to the bottom to load all files,
+									then click OK.</span
+								>
+							</div>
+							<div class="form-group">
+								<label class="form-label">Drive Folder URL</label>
+								<input
+									type="url"
+									id="publicFolderUrl"
+									class="input"
+									placeholder="https://drive.google.com/drive/folders/1ABC..." />
+								<p class="form-description">
+									Paste any Google Drive folder link (public or shared with you)
+								</p>
+							</div>
+							<div class="form-group">
+								<label class="form-label">File Pattern (Optional)</label>
 								<input
 									type="text"
-									id="folderPath"
+									id="filePattern"
 									class="input"
-									placeholder="No folder selected"
-									readonly />
-								<button id="browseBtn" class="button button-secondary">
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-										<path
-											d="M14 6L14 14L2 14L2 2L6 2"
-											stroke="currentColor"
-											stroke-width="1.5"
-											stroke-linecap="round" />
-										<path
-											d="M6 2L10 2L14 6"
-											stroke="currentColor"
-											stroke-width="1.5"
-											stroke-linecap="round"
-											stroke-linejoin="round" />
-										<path
-											d="M10 2L10 6L14 6"
-											stroke="currentColor"
-											stroke-width="1.5"
-											stroke-linecap="round"
-											stroke-linejoin="round" />
-									</svg>
-									Browse
-								</button>
+									placeholder="e.g. .pdf or .docx (leave empty for all files)" />
+								<p class="form-description">Filter files by extension</p>
 							</div>
 						</div>
 					</div>
@@ -444,6 +469,19 @@
 					</button>
 				</div>
 				<div class="dialog-body">
+					<div class="form-group">
+						<label class="form-label">Roll Number Pattern</label>
+						<input
+							type="text"
+							id="rollNumberPattern"
+							class="input"
+							placeholder="e.g. 18842826___ or ___-suffix or prefix___" />
+						<p class="form-description">
+							Use underscores (_) to indicate where the roll number appears. The
+							number of underscores determines the roll number length (e.g., ___
+							for 3 digits)
+						</p>
+					</div>
 					<div class="form-group">
 						<label class="form-label">Default Ignore Rolls</label>
 						<textarea

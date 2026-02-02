@@ -1,3 +1,10 @@
+/**
+ * Icon conversion script for Electron application.
+ * Generates PNG icons from SVG source and creates a helper HTML converter.
+ * This script creates an HTML file that can be opened in a browser to manually
+ * convert the SVG icon to PNG format for use in the Electron app.
+ */
+
 // Quick script to generate a base64 data URI icon for Electron
 const fs = require("fs");
 const path = require("path");

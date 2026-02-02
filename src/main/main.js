@@ -7,10 +7,16 @@ const {
 } = require("electron");
 const path = require("path");
 const fs = require("fs").promises;
+const axios = require("axios");
+const puppeteer = require("puppeteer");
 
 let mainWindow;
 let settingsPath;
 
+/**
+ * Creates the main application window with custom configuration.
+ * Sets up the window properties, icon, and web preferences for the Electron app.
+ */
 function createWindow() {
 	// Create icon from PNG
 	let icon;
@@ -82,7 +88,7 @@ ipcMain.handle("load-settings", async () => {
 			ignoreRolls: "",
 			startRoll: "001",
 			endRoll: "140",
-			position: "Middle",
+			rollNumberPattern: "___",
 			maxSize: "0",
 			checkDuplicates: true,
 		};
@@ -106,49 +112,337 @@ ipcMain.handle("select-folder", async () => {
 	return result.canceled ? null : result.filePaths[0];
 });
 
+// Helper: Extract Google Drive Folder ID from URL
+/**
+ * Extracts the folder ID from various Google Drive URL formats.
+ * Supports different URL patterns including /folders/, /open?id=, and sharing links.
+ * @param {string} url - The Google Drive folder URL to parse
+ * @returns {string|null} The extracted folder ID or null if not found
+ */
+function extractFolderIdFromUrl(url) {
+	// Handle formats like:
+	// https://drive.google.com/drive/folders/1ABC...
+	// https://drive.google.com/open?id=1ABC...
+	// https://drive.google.com/drive/folders/1ABC?usp=sharing
+	const folderMatch = url.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+	if (folderMatch) return folderMatch[1];
+
+	const idMatch = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+	if (idMatch) return idMatch[1];
+
+	return null;
+}
+
+// Helper: Fetch files from public Google Drive folder using Puppeteer
+/**
+ * Fetches file information from a public Google Drive folder using browser automation.
+ * Opens a visible browser window, injects a capture script, and waits for user interaction
+ * to extract file names and sizes from the Drive interface.
+ * @param {string} folderUrl - The public Google Drive folder URL
+ * @param {string} filePattern - File extension pattern to filter (default: ".pdf")
+ * @returns {Promise<Array>} Array of file objects with name, size, and id properties
+ * @throws {Error} If folder URL is invalid or no files are captured
+ */
+async function fetchPublicDriveFiles(folderUrl, filePattern = ".pdf") {
+	const folderId = extractFolderIdFromUrl(folderUrl);
+	if (!folderId) {
+		throw new Error("Invalid Google Drive folder URL format");
+	}
+
+	console.log("Opening Drive folder in browser...");
+
+	// Get Chrome executable path for the user's system
+	const chromePaths = [
+		"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+		"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+		process.env.LOCALAPPDATA + "\\Google\\Chrome\\Application\\chrome.exe",
+	];
+
+	let executablePath = null;
+	for (const chromePath of chromePaths) {
+		try {
+			await fs.access(chromePath);
+			executablePath = chromePath;
+			break;
+		} catch (e) {
+			// Path not found, try next
+		}
+	}
+
+	// Use Puppeteer - VISIBLE browser for user to scroll
+	const browser = await puppeteer.launch({
+		headless: false,
+		executablePath: executablePath,
+		args: [
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--window-size=1200,900",
+		],
+		defaultViewport: null,
+	});
+
+	try {
+		const page = await browser.newPage();
+
+		// Navigate to the folder
+		const fullUrl = `https://drive.google.com/drive/folders/${folderId}`;
+		await page.goto(fullUrl, { waitUntil: "networkidle2", timeout: 60000 });
+
+		// Wait for page to load
+		await new Promise((r) => setTimeout(r, 3000));
+
+		// Inject the capture script
+		await page.addScriptTag({
+			content: getInjectedScript(),
+		});
+
+		// Wait for user to click capture button
+		await page.waitForFunction(
+			() => window.filesCaptured === true,
+			{ timeout: 300000 }, // 5 minute timeout
+		);
+
+		// Get the captured files
+		const capturedFiles = await page.evaluate(() => window.capturedFiles);
+
+		// Small delay before closing
+		await new Promise((r) => setTimeout(r, 1000));
+
+		const files = capturedFiles.map((f) => ({
+			name: f.name,
+			size: parseFileSize(f.size),
+			id: "",
+		}));
+
+		console.log(`Captured ${files.length} files from Drive folder`);
+
+		if (files.length === 0) {
+			throw new Error(
+				"No files captured. Make sure you scrolled to load all files before clicking Capture.",
+			);
+		}
+
+		return filterFilesByPattern(files, filePattern);
+	} finally {
+		await browser.close();
+	}
+}
+
+// Script to inject into Google Drive page
+/**
+ * Generates JavaScript code to be injected into the Google Drive page.
+ * Creates a floating UI panel that displays file count and provides a capture button.
+ * The injected script extracts file information from the DOM and communicates back to the main process.
+ * @returns {string} JavaScript code as a string to be injected into the page
+ */
+function getInjectedScript() {
+	return `
+		(function() {
+			// Create floating panel
+			const panel = document.createElement('div');
+			panel.id = 'roll-auditor-panel';
+			panel.style.cssText = 'position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px 25px;border-radius:12px;z-index:999999;box-shadow:0 10px 40px rgba(0,0,0,0.3);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:white;min-width:280px;';
+
+			panel.innerHTML = '<h3 style="margin:0 0 10px;font-size:16px;font-weight:600;">📋 Roll Number Auditor</h3>' +
+				'<p style="margin:0 0 15px;font-size:13px;opacity:0.9;line-height:1.4;">1. Scroll down to load all files<br>2. Click Capture when done</p>' +
+				'<div id="file-count-display" style="background:rgba(255,255,255,0.2);padding:8px 12px;border-radius:6px;margin-bottom:15px;font-size:13px;">Files detected: <span id="detected-count">0</span></div>' +
+				'<button id="capture-files-btn" style="background:white;color:#667eea;border:none;padding:12px 20px;font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;width:100%;">✓ Capture Files & Close</button>';
+
+			document.body.appendChild(panel);
+
+			// Function to count and extract files from DOM
+			function extractFiles() {
+				const files = [];
+				const seenNames = new Set();
+				const filePattern = /\\.(pdf|docx?|xlsx?|pptx?|txt|zip|rar|jpg|jpeg|png|gif)$/i;
+
+				// Method 1: data-tooltip
+				document.querySelectorAll('[data-tooltip]').forEach(function(el) {
+					const name = el.getAttribute('data-tooltip');
+					if (name && filePattern.test(name) && !seenNames.has(name.toLowerCase())) {
+						seenNames.add(name.toLowerCase());
+						files.push({ name: name, size: '0' });
+					}
+				});
+
+				// Method 2: aria-label
+				document.querySelectorAll('[aria-label]').forEach(function(el) {
+					const label = el.getAttribute('aria-label');
+					if (label && filePattern.test(label)) {
+						const name = label.split(',')[0].trim();
+						if (!seenNames.has(name.toLowerCase())) {
+							seenNames.add(name.toLowerCase());
+							const row = el.closest('[data-id]') || el.parentElement;
+							const sizeMatch = row && row.textContent ? row.textContent.match(/(\\d+(?:\\.\\d+)?\\s*(?:KB|MB|GB|bytes))/i) : null;
+							files.push({ name: name, size: sizeMatch ? sizeMatch[1] : '0' });
+						}
+					}
+				});
+
+				// Method 3: visible text in rows
+				document.querySelectorAll('[data-id]').forEach(function(row) {
+					const text = row.textContent || '';
+					const lines = text.split('\\n');
+					lines.forEach(function(line) {
+						const trimmed = line.trim();
+						if (filePattern.test(trimmed) && trimmed.length > 3 && trimmed.length < 200 && !seenNames.has(trimmed.toLowerCase())) {
+							seenNames.add(trimmed.toLowerCase());
+							const sizeMatch = text.match(/(\\d+(?:\\.\\d+)?\\s*(?:KB|MB|GB|bytes))/i);
+							files.push({ name: trimmed, size: sizeMatch ? sizeMatch[1] : '0' });
+						}
+					});
+				});
+
+				return files;
+			}
+
+			// Update count periodically
+			setInterval(function() {
+				const countEl = document.getElementById('detected-count');
+				if (countEl) {
+					countEl.textContent = extractFiles().length;
+				}
+			}, 1000);
+
+			// Initialize
+			window.filesCaptured = false;
+			window.capturedFiles = [];
+
+			// Capture button click
+			document.getElementById('capture-files-btn').addEventListener('click', function() {
+				const files = extractFiles();
+				window.capturedFiles = files;
+				window.filesCaptured = true;
+
+				const btn = document.getElementById('capture-files-btn');
+				btn.textContent = '✓ Captured ' + files.length + ' files! Closing...';
+				btn.style.background = '#4CAF50';
+				btn.style.color = 'white';
+			});
+		})();
+	`;
+}
+
+// Helper to parse file size string to bytes
+/**
+ * Parses a human-readable file size string and converts it to bytes.
+ * Supports various units (KB, MB, GB, bytes) and handles different formats.
+ * @param {string} sizeStr - The file size string (e.g., "1.5 MB", "256 KB")
+ * @returns {number} The size in bytes, or 0 if parsing fails
+ */
+function parseFileSize(sizeStr) {
+	if (!sizeStr || sizeStr === "0") return 0;
+	const match = sizeStr.match(/([\d.]+)\s*(KB|MB|GB|bytes?)/i);
+	if (!match) return 0;
+	const num = parseFloat(match[1]);
+	const unit = match[2].toUpperCase();
+	switch (unit) {
+		case "KB":
+			return Math.round(num * 1024);
+		case "MB":
+			return Math.round(num * 1024 * 1024);
+		case "GB":
+			return Math.round(num * 1024 * 1024 * 1024);
+		default:
+			return Math.round(num);
+	}
+}
+
+// Helper function to filter files by pattern
+/**
+ * Filters an array of file objects based on file extension pattern.
+ * @param {Array} files - Array of file objects with name property
+ * @param {string} filePattern - File extension pattern (e.g., ".pdf", "pdf")
+ * @returns {Array} Filtered array of files matching the pattern
+ */
+function filterFilesByPattern(files, filePattern) {
+	if (!filePattern || filePattern === "") {
+		return files;
+	}
+	const extension = filePattern.startsWith(".")
+		? filePattern.toLowerCase()
+		: `.${filePattern.toLowerCase()}`;
+	return files.filter((f) => f.name.toLowerCase().endsWith(extension));
+}
+
 // Audit Processing
 ipcMain.handle("audit-rolls", async (event, config) => {
 	const {
+		sourceType,
 		folderPath,
+		publicFolderUrl,
+		filePattern,
 		startRoll,
 		endRoll,
-		position,
+		rollNumberPattern,
 		maxSize,
 		ignoreList,
 		checkDuplicates,
 	} = config;
 
 	try {
-		const files = await fs.readdir(folderPath);
-		const pdfFiles = files.filter((f) => f.toLowerCase().endsWith(".pdf"));
+		let files = [];
+
+		// Get files based on source type
+		if (sourceType === "local") {
+			// Local folder processing
+			const allFiles = await fs.readdir(folderPath);
+			files = allFiles.map((f) => ({ name: f, size: 0 }));
+
+			// Get actual file sizes
+			for (let i = 0; i < files.length; i++) {
+				try {
+					const stats = await fs.stat(path.join(folderPath, files[i].name));
+					files[i].size = stats.size;
+				} catch (e) {
+					// Ignore stat errors
+				}
+			}
+		} else if (sourceType === "public") {
+			// Public Drive folder processing
+			files = await fetchPublicDriveFiles(publicFolderUrl, filePattern);
+		} else {
+			throw new Error("Invalid source type");
+		}
+
+		// Filter files by extension
+		let pdfFiles;
+		if (sourceType === "local") {
+			pdfFiles = files.filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+		} else {
+			// For public folders, files are already filtered
+			pdfFiles = files;
+		}
 
 		const foundRolls = new Map();
 		const foundLargeRolls = [];
 		const duplicates = new Map();
 
-		for (const filename of pdfFiles) {
-			const rollNumber = extractRollNumber(filename, position);
+		for (const file of pdfFiles) {
+			const rollNumber = extractRollNumber(file.name, rollNumberPattern);
 
-			if (rollNumber && rollNumber.length === 11) {
-				const suffix = parseInt(rollNumber.slice(-3));
+			if (rollNumber) {
+				const rollInt = parseInt(rollNumber);
 
-				if (suffix >= startRoll && suffix <= endRoll) {
-					const filePath = path.join(folderPath, filename);
-					const stats = await fs.stat(filePath);
-					const fileSize = stats.size;
+				if (rollInt >= startRoll && rollInt <= endRoll) {
+					const fileSize = file.size;
 
 					if (maxSize > 0 && fileSize > maxSize) {
-						foundLargeRolls.push({ roll: suffix, size: fileSize, filename });
+						foundLargeRolls.push({
+							roll: rollInt,
+							size: fileSize,
+							filename: file.name,
+						});
 					} else {
-						if (foundRolls.has(suffix)) {
-							foundRolls.get(suffix).push(filename);
-							if (!duplicates.has(suffix)) {
-								duplicates.set(suffix, [...foundRolls.get(suffix)]);
+						if (foundRolls.has(rollInt)) {
+							foundRolls.get(rollInt).push(file.name);
+							if (!duplicates.has(rollInt)) {
+								duplicates.set(rollInt, [...foundRolls.get(rollInt)]);
 							} else {
-								duplicates.get(suffix).push(filename);
+								duplicates.get(rollInt).push(file.name);
 							}
 						} else {
-							foundRolls.set(suffix, [filename]);
+							foundRolls.set(rollInt, [file.name]);
 						}
 					}
 				}
@@ -232,19 +526,46 @@ ipcMain.handle(
 	},
 );
 
-function extractRollNumber(filename, position) {
-	const matches = filename.match(/\d{11}/g);
-	if (!matches || matches.length === 0) return null;
-
-	if (position === "Start") {
-		return filename.startsWith(matches[0]) ? matches[0] : null;
-	} else if (position === "End") {
-		const nameWithoutExt = filename.replace(".pdf", "");
-		return nameWithoutExt.endsWith(matches[matches.length - 1])
-			? matches[matches.length - 1]
-			: null;
-	} else {
-		const underscoreMatch = filename.match(/_(\d{11})_/);
-		return underscoreMatch ? underscoreMatch[1] : matches[0];
+/**
+ * Extracts a roll number from a filename based on a pattern configuration.
+ * The pattern uses underscores to indicate where the roll number should be.
+ * @param {string} filename - The filename to extract roll number from
+ * @param {string} pattern - Pattern with underscores representing roll number position (e.g., "18842826___" or "___-suffix")
+ * @returns {string|null} The extracted roll number or null if not found
+ */
+function extractRollNumber(filename, pattern) {
+	if (!pattern || !pattern.includes("_")) {
+		// Fallback: try to find any digits
+		const matches = filename.match(/\d+/g);
+		return matches ? matches[0] : null;
 	}
+
+	// Count underscores to determine roll number length
+	const rollLength = (pattern.match(/_/g) || []).length;
+
+	// Find where underscores start in the pattern
+	const underscoreStart = pattern.indexOf("_");
+	const underscoreEnd = pattern.lastIndexOf("_") + 1;
+
+	// Get prefix and suffix from pattern
+	const prefix = pattern.substring(0, underscoreStart);
+	const suffix = pattern.substring(underscoreEnd);
+
+	// Remove file extension from filename for matching
+	const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+
+	// Build regex pattern
+	let regexPattern = "";
+	if (prefix) {
+		regexPattern += prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	}
+	regexPattern += `(\\d{${rollLength}})`;
+	if (suffix) {
+		regexPattern += suffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	}
+
+	const regex = new RegExp(regexPattern);
+	const match = nameWithoutExt.match(regex);
+
+	return match ? match[1] : null;
 }

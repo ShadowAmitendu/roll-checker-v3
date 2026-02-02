@@ -29,6 +29,12 @@
 	--input: 240 3.7% 15.9%;
 	--ring: 240 4.9% 83.9%;
 	--radius: 0.5rem;
+
+	/* Banner Colors */
+	--banner-bg: 212 70% 25% / 0.3;
+	--banner-border: 212 70% 40% / 0.4;
+	--banner-text: 212 90% 75%;
+	--banner-icon: 212 90% 65%;
 }
 
 [data-theme="light"] {
@@ -52,6 +58,12 @@
 	--border: 214.3 31.8% 91.4%;
 	--input: 214.3 31.8% 91.4%;
 	--ring: 215 20.2% 65.1%;
+
+	/* Banner Colors */
+	--banner-bg: 212 100% 95%;
+	--banner-border: 212 60% 85%;
+	--banner-text: 212 80% 30%;
+	--banner-icon: 212 70% 45%;
 }
 
 body {
@@ -242,6 +254,74 @@ body {
 	color: hsl(var(--muted-foreground));
 	margin-top: -2px;
 	margin-bottom: 0;
+}
+
+/* Tab Styles */
+.tab-group {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	border-bottom: 1px solid hsl(var(--border));
+}
+
+.tab-button {
+	flex: 1;
+	padding: 10px 16px;
+	border: none;
+	background: transparent;
+	color: hsl(var(--muted-foreground));
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+	transition: all 0.2s;
+	text-align: center;
+}
+
+.tab-button:hover {
+	color: hsl(var(--foreground));
+}
+
+.tab-button-active {
+	color: hsl(var(--foreground));
+	border-bottom-color: hsl(var(--primary));
+}
+
+.tab-content {
+	display: none;
+	animation: fadeIn 0.2s;
+}
+
+.tab-content-active {
+	display: block;
+}
+
+.info-banner {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	background: hsl(var(--banner-bg));
+	border: 1px solid hsl(var(--banner-border));
+	border-radius: var(--radius);
+	margin-bottom: 16px;
+	color: hsl(var(--banner-text));
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+.info-banner svg {
+	flex-shrink: 0;
+	color: hsl(var(--banner-icon));
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 
 .input {
