@@ -238,25 +238,109 @@ async function fetchPublicDriveFiles(folderUrl, filePattern = ".pdf") {
 function getInjectedScript() {
 	return `
 		(function() {
-			// Create floating panel
+
 			const panel = document.createElement('div');
 			panel.id = 'roll-auditor-panel';
-			panel.style.cssText = 'position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px 25px;border-radius:12px;z-index:999999;box-shadow:0 10px 40px rgba(0,0,0,0.3);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:white;min-width:280px;';
+			panel.style.cssText = "
+				position:fixed;
+				top:20px;
+				right:20px;
+				width:320px;
+				padding:22px;
+				border-radius:14px;
+				z-index:999999;
+				background:#111827;
+				box-shadow:0 20px 60px rgba(0,0,0,0.35);
+				font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+				color:#f9fafb;
+				border:1px solid rgba(255,255,255,0.05);
+				animation:fadeIn 0.25s ease-out;
+			";
 
-			panel.innerHTML = '<h3 style="margin:0 0 10px;font-size:16px;font-weight:600;">📋 Roll Number Auditor</h3>' +
-				'<p style="margin:0 0 15px;font-size:13px;opacity:0.9;line-height:1.4;">1. Scroll down to load all files<br>2. Click Capture when done</p>' +
-				'<div id="file-count-display" style="background:rgba(255,255,255,0.2);padding:8px 12px;border-radius:6px;margin-bottom:15px;font-size:13px;">Files detected: <span id="detected-count">0</span></div>' +
-				'<button id="capture-files-btn" style="background:white;color:#667eea;border:none;padding:12px 20px;font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;width:100%;">✓ Capture Files & Close</button>';
+			panel.innerHTML = \`
+				<style>
+					@keyframes fadeIn {
+						from { opacity:0; transform:translateY(-8px); }
+						to { opacity:1; transform:translateY(0); }
+					}
+
+					#auditor-title {
+						font-size:16px;
+						font-weight:600;
+						margin-bottom:6px;
+						letter-spacing:0.2px;
+					}
+
+					#auditor-desc {
+						font-size:13px;
+						color:#9ca3af;
+						line-height:1.5;
+						margin-bottom:18px;
+					}
+
+					#auditor-count-box {
+						background:#1f2937;
+						padding:12px 14px;
+						border-radius:10px;
+						font-size:14px;
+						margin-bottom:18px;
+						display:flex;
+						justify-content:space-between;
+						align-items:center;
+						border:1px solid rgba(255,255,255,0.05);
+					}
+
+					#detected-count {
+						font-weight:700;
+						font-size:16px;
+						color:#60a5fa;
+					}
+
+					#auditor-btn {
+						background:#2563eb;
+						color:white;
+						border:none;
+						padding:12px;
+						font-size:14px;
+						font-weight:600;
+						border-radius:10px;
+						cursor:pointer;
+						width:100%;
+						transition:all 0.2s ease;
+					}
+
+					#auditor-btn:hover {
+						background:#1d4ed8;
+						transform:translateY(-1px);
+					}
+
+					#auditor-btn:active {
+						transform:scale(0.98);
+					}
+				</style>
+
+				<div id="auditor-title">Roll Number Auditor</div>
+
+				<div id="auditor-desc">
+					1. Scroll to load all files<br>
+					2. Click capture when ready
+				</div>
+
+				<div id="auditor-count-box">
+					<span>Files Detected</span>
+					<span id="detected-count">0</span>
+				</div>
+
+				<button id="auditor-btn">Capture Files</button>
+			\`;
 
 			document.body.appendChild(panel);
 
-			// Function to count and extract files from DOM
 			function extractFiles() {
 				const files = [];
 				const seenNames = new Set();
 				const filePattern = /\\.(pdf|docx?|xlsx?|pptx?|txt|zip|rar|jpg|jpeg|png|gif)$/i;
 
-				// Method 1: data-tooltip
 				document.querySelectorAll('[data-tooltip]').forEach(function(el) {
 					const name = el.getAttribute('data-tooltip');
 					if (name && filePattern.test(name) && !seenNames.has(name.toLowerCase())) {
@@ -265,7 +349,6 @@ function getInjectedScript() {
 					}
 				});
 
-				// Method 2: aria-label
 				document.querySelectorAll('[aria-label]').forEach(function(el) {
 					const label = el.getAttribute('aria-label');
 					if (label && filePattern.test(label)) {
@@ -273,13 +356,14 @@ function getInjectedScript() {
 						if (!seenNames.has(name.toLowerCase())) {
 							seenNames.add(name.toLowerCase());
 							const row = el.closest('[data-id]') || el.parentElement;
-							const sizeMatch = row && row.textContent ? row.textContent.match(/(\\d+(?:\\.\\d+)?\\s*(?:KB|MB|GB|bytes))/i) : null;
+							const sizeMatch = row && row.textContent
+								? row.textContent.match(/(\\d+(?:\\.\\d+)?\\s*(?:KB|MB|GB|bytes))/i)
+								: null;
 							files.push({ name: name, size: sizeMatch ? sizeMatch[1] : '0' });
 						}
 					}
 				});
 
-				// Method 3: visible text in rows
 				document.querySelectorAll('[data-id]').forEach(function(row) {
 					const text = row.textContent || '';
 					const lines = text.split('\\n');
@@ -296,7 +380,6 @@ function getInjectedScript() {
 				return files;
 			}
 
-			// Update count periodically
 			setInterval(function() {
 				const countEl = document.getElementById('detected-count');
 				if (countEl) {
@@ -304,21 +387,19 @@ function getInjectedScript() {
 				}
 			}, 1000);
 
-			// Initialize
 			window.filesCaptured = false;
 			window.capturedFiles = [];
 
-			// Capture button click
-			document.getElementById('capture-files-btn').addEventListener('click', function() {
+			document.getElementById('auditor-btn').addEventListener('click', function() {
 				const files = extractFiles();
 				window.capturedFiles = files;
 				window.filesCaptured = true;
 
-				const btn = document.getElementById('capture-files-btn');
-				btn.textContent = '✓ Captured ' + files.length + ' files! Closing...';
-				btn.style.background = '#4CAF50';
-				btn.style.color = 'white';
+				const btn = document.getElementById('auditor-btn');
+				btn.textContent = "Captured " + files.length + " Files";
+				btn.style.background = "#16a34a";
 			});
+
 		})();
 	`;
 }
