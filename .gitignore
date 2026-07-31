@@ -1,18 +1,49 @@
 
+# Dependencies
 /node_modules
+
+# Build & Output directories
 /dist
 /build
+/out
+/.cache
+/coverage
+/.nyc_output
+
+# Editor / IDE configurations
 /.vscode
+/.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# Operating System files
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables & secrets
 .env
-# Temporary files
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files & test outputs
 *.txt
 *.html
 !src/**/*.html
-
-# Test outputs
 /tests/*.txt
 /tests/*.html
 
 # Chrome profile for puppeteer
 /chrome-profile
+
